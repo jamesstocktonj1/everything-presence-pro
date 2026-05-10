@@ -1,8 +1,8 @@
 ethernet:
-  type: LAN8720
-  mdc_pin: GPIO23
-  mdio_pin: GPIO18
-  clk: 
-    pin: GPIO17
-    mode: CLK_OUT
-  phy_addr: 0
+  type: W5500
+  clk_pin: GPIO19
+  mosi_pin: GPIO18
+  miso_pin: GPIO20
+  cs_pin: GPIO23
+  interrupt_pin: GPIO22
+  reset_pin: GPIO21

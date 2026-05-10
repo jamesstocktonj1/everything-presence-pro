@@ -730,16 +730,8 @@ text:
 
 uart:
   - id: uart_bus
-    tx_pin: 
-      number: GPIO13
-      mode:
-        input: true
-        pullup: true
-    rx_pin: 
-      number: GPIO14
-      mode:
-        input: true
-        pullup: true
+    tx_pin: GPIO16
+    rx_pin: GPIO17
     baud_rate: 256000
     parity: NONE
     stop_bits: 1
@@ -1195,7 +1187,7 @@ uart:
             }
           }
 
-          if(id(last_zone_hold) != 0 && (!id(ld2450_assumed_presence).state || id(dfrobot_presence).state == false)) {
+          if(id(last_zone_hold) != 0 && (!id(ld2450_assumed_presence).state)) {
             id(last_zone_hold) = 0;
           }
           bool any_detected = p1_detected || p2_detected || p3_detected;

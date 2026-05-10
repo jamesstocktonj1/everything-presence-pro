@@ -6,20 +6,8 @@ esphome:
     - priority: 375
       then:
         - delay: 200ms
-        - script.execute: update_relay_state
+        # - script.execute: update_relay_state
         # Start loading animation and keep it until API connects
-        - if:
-            condition:
-              lambda: 'return id(status_led_select).current_option() == "Enabled";'
-            then:
-              - light.turn_on:
-                  id: led_rgb
-                  brightness: 30%
-                  red: 0%
-                  green: 60%
-                  blue: 100%
-                  white: 0%
-                  effect: "Network Connecting"
 
 # Enable logging
 logger:
@@ -28,18 +16,18 @@ logger:
 api:
   id: api_id
   actions:
-    - action: set_update_manifest
-      variables:
-        url: string
-      then:
-        - lambda: |-
-            ESP_LOGI("fw", "Setting update manifest URL: %s", url.c_str());
-            id(update_http_request).set_source_url(url);
-        - component.update: update_http_request
-        - delay: 1s
-        - update.perform:
-            id: update_http_request
-            force_update: true
+    # - action: set_update_manifest
+    #   variables:
+    #     url: string
+    #   then:
+    #     - lambda: |-
+    #         ESP_LOGI("fw", "Setting update manifest URL: %s", url.c_str());
+    #         id(update_http_request).set_source_url(url);
+    #     - component.update: update_http_request
+    #     - delay: 1s
+    #     - update.perform:
+    #         id: update_http_request
+    #         force_update: true
     - action: get_build_flags
       then:
         - api.respond:
@@ -120,42 +108,42 @@ ota:
   - platform: http_request
     id: ota_http_request
 
-sensor:
-  - platform: shtcx
-    id: "shtc3_sensor"
-    i2c_id: bus_a
-    temperature:
-      name: Temperature
-      id: temperature_sensor
-      filters:
-        - lambda: "return x + id(env_temperature_offset).state;"
-    humidity:
-      name: Humidity
-      id: humidity_sensor
-      filters:
-        - lambda: "return x + id(env_humidity_offset).state;"
-    address: 0x70
-    update_interval: 30s
+# sensor:
+#   - platform: shtcx
+#     id: "shtc3_sensor"
+#     i2c_id: bus_a
+#     temperature:
+#       name: Temperature
+#       id: temperature_sensor
+#       filters:
+#         - lambda: "return x + id(env_temperature_offset).state;"
+#     humidity:
+#       name: Humidity
+#       id: humidity_sensor
+#       filters:
+#         - lambda: "return x + id(env_humidity_offset).state;"
+#     address: 0x70
+#     update_interval: 30s
   
-  - platform: bh1750
-    name: Illuminance
-    id: illuminance_sensor
-    i2c_id: bus_a
-    address: 0x23
-    update_interval: 2s
-    filters:
-      - lambda: "return x + id(env_illuminance_offset).state;"
-      - or:
-          - throttle: 30s
-          - delta: 2
-      - clamp:
-          min_value: 0
+#   - platform: bh1750
+#     name: Illuminance
+#     id: illuminance_sensor
+#     i2c_id: bus_a
+#     address: 0x23
+#     update_interval: 2s
+#     filters:
+#       - lambda: "return x + id(env_illuminance_offset).state;"
+#       - or:
+#           - throttle: 30s
+#           - delta: 2
+#       - clamp:
+#           min_value: 0
 
-i2c:
-  - id: bus_a
-    scl: GPIO32
-    sda: GPIO33
-    scan: true
+# i2c:
+#   - id: bus_a
+#     scl: GPIO32
+#     sda: GPIO33
+#     scan: true
 
 binary_sensor:
   - platform: gpio
@@ -163,7 +151,7 @@ binary_sensor:
     id: pir_motion
     device_class: motion
     pin:
-      number: GPIO36
+      number: GPIO0
     filters:
       - delayed_off: !lambda 'return id(pir_off_delay).state * 1000.0;'
     on_state:
@@ -173,11 +161,11 @@ binary_sensor:
             if (mode == "Motion Only" || mode == "Motion or Presence") {
               bool activate = id(pir_motion).state;
               bool desired = (id(relay_contact_mode).current_option() == "Normally Open (NO)") ? activate : !activate;
-              if (desired) {
-                id(system_alarm_relay).turn_on();
-              } else {
-                id(system_alarm_relay).turn_off();
-              }
+              // if (desired) {
+              //   id(system_alarm_relay).turn_on();
+              // } else {
+              //   id(system_alarm_relay).turn_off();
+              // }
             }
 
   - platform: template
@@ -187,15 +175,7 @@ binary_sensor:
     filters:
       - delayed_off: !lambda 'return id(occupancy_off_delay).state * 1000.0;'
     lambda: |-
-      if ( id(dfrobot_presence).state or id(pir_motion).state) {
-        return true;
-      }
-      else if (id(dfrobot_presence).state == 0 and id(pir_motion).state == 0) {
-        return false;
-      }
-      else {
-        return id(ld2450_occupancy).state;
-      }
+      return id(ld2450_occupancy).state;
     on_state:
       then:
         - lambda: |-
@@ -203,11 +183,11 @@ binary_sensor:
             if (mode == "Presence Only" || mode == "Motion or Presence") {
               bool activate = id(occupancy).state;
               bool desired = (id(relay_contact_mode).current_option() == "Normally Open (NO)") ? activate : !activate;
-              if (desired) {
-                id(system_alarm_relay).turn_on();
-              } else {
-                id(system_alarm_relay).turn_off();
-              }
+              // if (desired) {
+              //   id(system_alarm_relay).turn_on();
+              // } else {
+              //   id(system_alarm_relay).turn_off();
+              // }
             }
         - if:
             condition:
@@ -222,15 +202,14 @@ binary_sensor:
     filters:
       - delayed_off: !lambda 'return id(occupancy_off_delay).state * 1000.0;'
     lambda: |-
-      return id(dfrobot_presence).state || id(ld2450_occupancy).state;
+      return id(ld2450_occupancy).state;
 
 light:
   - platform: esp32_rmt_led_strip
     id: led_rgb
     rgb_order: GRB
     pin:
-      number: GPIO2
-      ignore_strapping_warning: true
+      number: GPIO15
     num_leds: 1
     chipset: sk6812
     name: "LED"
@@ -323,9 +302,9 @@ select:
       - "Normally Closed (NC)"
     initial_option: "Normally Open (NO)"
     restore_value: true
-    on_value:
-      then:
-        - script.execute: update_relay_state
+    # on_value:
+    #   then:
+    #     - script.execute: update_relay_state
 
   - platform: template
     name: Relay Trigger Mode
@@ -339,9 +318,9 @@ select:
       - "Motion or Presence"
     initial_option: "Disabled"
     restore_value: true
-    on_value:
-      then:
-        - script.execute: update_relay_state
+    # on_value:
+    #   then:
+    #     - script.execute: update_relay_state
 
   - platform: template
     name: "LED Mode"
@@ -409,28 +388,28 @@ select:
     initial_option: "Disabled"
 
 script:
-  - id: update_relay_state
-    mode: restart
-    then:
-      - lambda: |-
-          auto mode = id(system_alarm_mode).current_option();
-          bool activate = false;
+  # - id: update_relay_state
+  #   mode: restart
+  #   then:
+  #     - lambda: |-
+  #         auto mode = id(system_alarm_mode).current_option();
+  #         bool activate = false;
 
-          if (mode == "Motion Only") {
-            activate = id(pir_motion).state;
-          } else if (mode == "Presence Only") {
-            activate = id(occupancy).state;
-          } else if (mode == "Motion or Presence") {
-            activate = id(pir_motion).state || id(occupancy).state;
-          }
+  #         if (mode == "Motion Only") {
+  #           activate = id(pir_motion).state;
+  #         } else if (mode == "Presence Only") {
+  #           activate = id(occupancy).state;
+  #         } else if (mode == "Motion or Presence") {
+  #           activate = id(pir_motion).state || id(occupancy).state;
+  #         }
 
-          bool desired = (id(relay_contact_mode).current_option() == "Normally Open (NO)") ? activate : !activate;
+  #         bool desired = (id(relay_contact_mode).current_option() == "Normally Open (NO)") ? activate : !activate;
 
-          if (desired) {
-            id(system_alarm_relay).turn_on();
-          } else {
-            id(system_alarm_relay).turn_off();
-          }
+  #         if (desired) {
+  #           id(system_alarm_relay).turn_on();
+  #         } else {
+  #           id(system_alarm_relay).turn_off();
+  #         }
  
   - id: control_leds
     mode: restart
@@ -697,14 +676,14 @@ script:
       - delay: 500ms
       - light.turn_off: led_rgb
 
-switch:
-  - platform: gpio
-    name: "Relay Output"
-    id: system_alarm_relay
-    pin:
-      number: GPIO12
-      inverted: false
-      ignore_strapping_warning: true
+# switch:
+#   - platform: gpio
+#     name: "Relay Output"
+#     id: system_alarm_relay
+#     pin:
+#       number: GPIO12
+#       inverted: false
+#       ignore_strapping_warning: true
 
 number:
   - platform: template
@@ -756,56 +735,56 @@ number:
     unit_of_measurement: seconds
     mode: slider
 
-  - platform: template
-    name: "Temperature Calibration"
-    id: env_temperature_offset
-    unit_of_measurement: "°C"
-    min_value: -20
-    max_value: 20
-    step: 0.1
-    mode: box
-    update_interval: never
-    optimistic: true
-    restore_value: true
-    initial_value: 0
-    icon: "mdi:thermometer"
-    entity_category: config
-    on_value:
-      - lambda: 'id(shtc3_sensor).update();'
+  # - platform: template
+  #   name: "Temperature Calibration"
+  #   id: env_temperature_offset
+  #   unit_of_measurement: "°C"
+  #   min_value: -20
+  #   max_value: 20
+  #   step: 0.1
+  #   mode: box
+  #   update_interval: never
+  #   optimistic: true
+  #   restore_value: true
+  #   initial_value: 0
+  #   icon: "mdi:thermometer"
+  #   entity_category: config
+  #   on_value:
+  #     - lambda: 'id(shtc3_sensor).update();'
 
-  - platform: template
-    name: "Humidity Calibration"
-    id: env_humidity_offset
-    unit_of_measurement: "%"
-    min_value: -50
-    max_value: 50
-    step: 0.1
-    mode: box
-    update_interval: never
-    optimistic: true
-    restore_value: true
-    initial_value: 0
-    icon: "mdi:water-percent"
-    entity_category: config
-    on_value:
-      - lambda: 'id(shtc3_sensor).update();'
+  # - platform: template
+  #   name: "Humidity Calibration"
+  #   id: env_humidity_offset
+  #   unit_of_measurement: "%"
+  #   min_value: -50
+  #   max_value: 50
+  #   step: 0.1
+  #   mode: box
+  #   update_interval: never
+  #   optimistic: true
+  #   restore_value: true
+  #   initial_value: 0
+  #   icon: "mdi:water-percent"
+  #   entity_category: config
+  #   on_value:
+  #     - lambda: 'id(shtc3_sensor).update();'
 
-  - platform: template
-    name: "Illuminance Calibration"
-    id: env_illuminance_offset
-    unit_of_measurement: "lx"
-    min_value: -50
-    max_value: 50
-    step: 1
-    mode: box
-    update_interval: never
-    optimistic: true
-    restore_value: true
-    initial_value: 0
-    icon: "mdi:brightness-5"
-    entity_category: config
-    on_value:
-      - lambda: 'id(illuminance_sensor).update();'
+  # - platform: template
+  #   name: "Illuminance Calibration"
+  #   id: env_illuminance_offset
+  #   unit_of_measurement: "lx"
+  #   min_value: -50
+  #   max_value: 50
+  #   step: 1
+  #   mode: box
+  #   update_interval: never
+  #   optimistic: true
+  #   restore_value: true
+  #   initial_value: 0
+  #   icon: "mdi:brightness-5"
+  #   entity_category: config
+  #   on_value:
+  #     - lambda: 'id(illuminance_sensor).update();'
 
 button:
   - platform: restart
@@ -817,58 +796,58 @@ button:
     entity_category: diagnostic
     on_press:
       - logger.log: "Applying firmware update based on selected configuration"
-      - lambda: |-
-          // Build manifest URL based on selected options
-          std::string base_url = "https://docs.everythingsmart.io/update/everything-presence-pro/everything-presence-pro-";
+      # - lambda: |-
+      #     // Build manifest URL based on selected options
+      #     std::string base_url = "https://docs.everythingsmart.io/update/everything-presence-pro/everything-presence-pro-";
 
-          // Add network type (required, lowercase)
-          std::string network = id(firmware_network).current_option();
-          std::transform(network.begin(), network.end(), network.begin(), ::tolower);
-          base_url += network;
+      #     // Add network type (required, lowercase)
+      #     std::string network = id(firmware_network).current_option();
+      #     std::transform(network.begin(), network.end(), network.begin(), ::tolower);
+      #     base_url += network;
 
-          // Add features in alphabetical order (ble before co2)
-          if (id(firmware_ble).current_option() == "Enabled") {
-            base_url += "-ble";
-          }
+      #     // Add features in alphabetical order (ble before co2)
+      #     if (id(firmware_ble).current_option() == "Enabled") {
+      #       base_url += "-ble";
+      #     }
 
-          if (id(firmware_co2).current_option() == "Enabled") {
-            base_url += "-co2";
-          }
+      #     if (id(firmware_co2).current_option() == "Enabled") {
+      #       base_url += "-co2";
+      #     }
 
-          base_url += "-manifest.json";
+      #     base_url += "-manifest.json";
 
-          ESP_LOGI("firmware", "Switching to manifest: %s", base_url.c_str());
-          id(update_http_request).set_source_url(base_url.c_str());
-      - component.update: update_http_request
-      - delay: 2s
-      - update.perform:
-          id: update_http_request
-          force_update: true
+      #     ESP_LOGI("firmware", "Switching to manifest: %s", base_url.c_str());
+      #     id(update_http_request).set_source_url(base_url.c_str());
+      # - component.update: update_http_request
+      # - delay: 2s
+      # - update.perform:
+      #     id: update_http_request
+      #     force_update: true
       - logger.log: "Applying firmware update based on selected configuration - using http fallback"
-      - lambda: |-
-          // Build manifest URL based on selected options
-          std::string base_url = "http://docs.everythingsmart.io/update/everything-presence-pro/everything-presence-pro-";
+      # - lambda: |-
+      #     // Build manifest URL based on selected options
+      #     std::string base_url = "http://docs.everythingsmart.io/update/everything-presence-pro/everything-presence-pro-";
 
-          // Add network type (required, lowercase)
-          std::string network = id(firmware_network).current_option();
-          std::transform(network.begin(), network.end(), network.begin(), ::tolower);
-          base_url += network;
+      #     // Add network type (required, lowercase)
+      #     std::string network = id(firmware_network).current_option();
+      #     std::transform(network.begin(), network.end(), network.begin(), ::tolower);
+      #     base_url += network;
 
-          // Add features in alphabetical order (ble before co2)
-          if (id(firmware_ble).current_option() == "Enabled") {
-            base_url += "-ble";
-          }
+      #     // Add features in alphabetical order (ble before co2)
+      #     if (id(firmware_ble).current_option() == "Enabled") {
+      #       base_url += "-ble";
+      #     }
 
-          if (id(firmware_co2).current_option() == "Enabled") {
-            base_url += "-co2";
-          }
+      #     if (id(firmware_co2).current_option() == "Enabled") {
+      #       base_url += "-co2";
+      #     }
 
-          base_url += "-manifest.json";
+      #     base_url += "-manifest.json";
 
-          ESP_LOGI("firmware", "Switching to manifest: %s", base_url.c_str());
-          id(update_http_request).set_source_url(base_url.c_str());
-      - component.update: update_http_request
-      - delay: 2s
-      - update.perform:
-          id: update_http_request
-          force_update: true
+      #     ESP_LOGI("firmware", "Switching to manifest: %s", base_url.c_str());
+      #     id(update_http_request).set_source_url(base_url.c_str());
+      # - component.update: update_http_request
+      # - delay: 2s
+      # - update.perform:
+      #     id: update_http_request
+      #     force_update: true
